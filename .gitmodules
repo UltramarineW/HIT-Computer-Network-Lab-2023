@@ -1,0 +1,3 @@
+[submodule "lab1/third_party/gflags"]
+	path = lab1/third_party/gflags
+	url = git@github.com:gflags/gflags.git
