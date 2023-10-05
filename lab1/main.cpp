@@ -1,6 +1,8 @@
 #include <iostream>
+#include "proxy_server.h"
 
 int main(int argc, char *argv[]) {
-    std::cout << "hello world" << std::endl;
+    ProxyServer server = ProxyServer(10);
+    server.init();
     return 0;
 }
