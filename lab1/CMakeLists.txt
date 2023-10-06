@@ -4,9 +4,11 @@
 
 include_directories(.)
 
-set (SRCS proxy_server.cpp)
+set (SRCS proxy_server.cpp utils.cpp)
 
 add_executable(proxy_server main.cpp ${SRCS})
+
+# add gflags support
 
 if (GFLAGS_USE_TARGET_NAMESPACE)
   if (TARGET gflags::gflags)
@@ -21,3 +23,6 @@ else ()
     message(FATAL_ERROR "gflags target not defined")
   endif ()
 endif ()
+
+# add winsock2 support
+target_link_libraries(proxy_server wsock32 ws2_32)
