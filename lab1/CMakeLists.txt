@@ -1,5 +1,3 @@
-add_subdirectory(./third_party/gflags/)
-
 # set(CMAKE_BINARY_DIR ${CMAKE_SOURCE_DIR}/build)
 
 # set(EXECUTABLE_OUTPUT_PATH ${CMAKE_SOURCE_DIR}/bin)
