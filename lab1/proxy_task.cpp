@@ -4,7 +4,7 @@
 
 #include "proxy_task.h"
 
-ProxyTask::ProxyTask(ProxyParam* lpParameter) : _proxy_parameter(*lpParameter) {
+ProxyTask::ProxyTask(ProxyParam *lpParameter) : _proxy_parameter(*lpParameter) {
 
 }
 
