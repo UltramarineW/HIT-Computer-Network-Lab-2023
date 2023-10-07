@@ -5,6 +5,9 @@
 #include <memory>
 #include <iostream>
 
+#define HTTP_PORT 80
+#define HTTPS_PORT 443
+
 class HTTP_Header_Parser{
 
 public:
@@ -13,7 +16,7 @@ public:
 
     // parse http message
     bool Parse(char *buffer);
-
+    
     // return http message after parse
     HTTPHeader GetHeaderMessage();
 

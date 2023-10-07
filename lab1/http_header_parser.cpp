@@ -9,7 +9,6 @@ bool HTTP_Header_Parser::Parse(char *buffer) {
     char *ptr;
     const char *delim = "\r\n";
     p = strtok_s(buffer, delim, &ptr);
-    std::cout << p << std::endl;
     // GET 方法
     if (p[0] == 'G')
     {
@@ -21,8 +20,13 @@ bool HTTP_Header_Parser::Parse(char *buffer) {
         memcpy(http_header->method, "POST", 4);
         memcpy(http_header->url, &p[5], strlen(p) - 14);
     }
+    else if (p[0] == 'C')
+    {
+        memcpy(http_header->method, "CONNECT", 7);
+        memcpy(http_header->url, &p[8], strlen(p) - 17);
+    }
 
-    std::cout << http_header->url << std::endl;
+
     p = strtok_s(nullptr, delim, &ptr);
     while (p)
     {
@@ -48,6 +52,12 @@ bool HTTP_Header_Parser::Parse(char *buffer) {
             break;
         }
         p = strtok_s(nullptr, delim, &ptr);
+    }
+
+    // Deal with HTTPS
+    http_header->port = HTTP_PORT;
+    if (!strcmp(http_header->host + strlen(http_header->host) - 3, "443")) {
+        http_header->port = HTTPS_PORT;
     }
     return true;
 }
