@@ -3,41 +3,35 @@
 
 #include <iostream>
 #include <winsock2.h>
+#include "http_header_message.h"
+#include "http_header_parser.h"
+#include "ThreadPool.h"
+#include "proxy_task.h"
+#include "gflags/gflags.h"
 
-#define HTTP_PORT 80
-#define MAXSIZE 65507
+DECLARE_int32(thread_nums);
 
-struct HTTPHeader{
-    char method[4];
-    char url[1024];
-    char host[1024];
-    char cookie[1024*10];
-    HTTPHeader () {
-        ZeroMemory(this, sizeof(HTTPHeader));
-    }
-};
 
-struct ProxyParam {
-    SOCKET client_socket;
-    SOCKET server_socket;
-};
 
 
 class ProxyServer {
 public:
     ProxyServer(int port);
-    // 服务器端初始化socket
-    bool InitSocket();
-    // 服务器端启动监听服务
+    // 服务器端启动
     void Start();
-    // 线程执行函数
 
 private:
+    // 服务器端初始化socket
+    bool InitSocket();
+    // 线程执行函数
     static unsigned int __stdcall ProxyThread(LPVOID lpParameter);
-    static void ParseHTTPHead(char* buffer, HTTPHeader* http_header);
+
+    // 连接服务器端
     bool ConnectToServer(SOCKET* server_socket, char *host);
 
     int server_port;
+    // TODO: 多线程支持
+    ThreadPool pool;
     SOCKET server_socket;
     sockaddr_in server_sockaddr;
     ProxyParam* lp_proxy_param;

@@ -1,8 +1,9 @@
+cmake_minimum_required(VERSION 3.22)
+
 cmake_policy(SET CMP0048 NEW)
 
 project(computer_network_lab)
 
-cmake_minimum_required(VERSION 3.22)
 
 message(STATUS "CMAKE_SOURCE_DIR:${CMAKE_SOURCE_DIR}")
 

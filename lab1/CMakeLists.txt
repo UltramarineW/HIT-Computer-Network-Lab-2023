@@ -4,9 +4,13 @@
 
 include_directories(.)
 
-set (SRCS proxy_server.cpp utils.cpp)
+set (SRCS proxy_server.cpp 
+          ThreadPool.cpp
+          http_header_parser.cpp
+          proxy_task.cpp)
 
 add_executable(proxy_server main.cpp ${SRCS})
+# add_executable(proxy_server main.cpp)
 
 # add gflags support
 
