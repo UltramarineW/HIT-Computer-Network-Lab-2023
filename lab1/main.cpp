@@ -4,7 +4,18 @@
 
 DEFINE_int32(port, 10240, "Proxy Server Port");
 DEFINE_string(listen_address, "127.0.0.1", "Proxy Server Listening Address");
-DEFINE_int32(thread_nums, 1, "Thread numbers in thread pool");
+DEFINE_int32(thread_nums, 1, "Thread numbers in thread _pool");
+DEFINE_int32(website_filter_protocol, 0, "Proxy server website filter protocol: "
+                                         " 0 for no filter protocol"
+                                         " 1 for white list filter"
+                                         " 2 for black list filter");
+DEFINE_int32(fishing_function, 0, "Whether start fishing function:"
+                                  " 0 for off"
+                                  " 1 for on");
+DEFINE_int32(user_filter_protocol, 0, "Proxy server user filter protocol:"
+                                      " 0 for no filter protocol"
+                                      " 1 for white list filter"
+                                      " 2 for black list filter");
 
 int main(int argc, char *argv[]) {
     gflags::ParseCommandLineFlags(&argc, &argv, true);

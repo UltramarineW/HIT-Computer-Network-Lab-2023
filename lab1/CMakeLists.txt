@@ -7,7 +7,9 @@ include_directories(.)
 set (SRCS proxy_server.cpp 
           ThreadPool.cpp
           http_header_parser.cpp
-          proxy_task.cpp)
+          proxy_task.cpp
+        http_filter.cpp
+        http_filter.h)
 
 add_executable(proxy_server main.cpp ${SRCS})
 # add_executable(proxy_server main.cpp)

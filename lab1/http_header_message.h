@@ -10,6 +10,7 @@ struct HTTPHeader{
     char url[1024];
     int port;
     char host[1024];
+    char user_agent[1024];
     char cookie[1024*10];
     HTTPHeader () {
         ZeroMemory(this, sizeof(HTTPHeader));
@@ -20,6 +21,7 @@ struct HTTPHeader{
             << "\nurl: " << header.url
             << "\nport: " << header.port
             << "\nhost: " << header.host
+            << "\nuser_agent: " << header.user_agent
             << "\ncookie: " << header.cookie;
         return out;
     }

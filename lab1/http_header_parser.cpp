@@ -35,6 +35,9 @@ bool HTTP_Header_Parser::Parse(char *buffer) {
         case 'H':
             memcpy(http_header->host, &p[6], strlen(p) - 6);
             break;
+        case 'U':
+            memcpy(http_header->user_agent, &p[12], strlen(p) - 12);
+            break;
         case 'C':
             if (strlen(p) > 8)
             {
