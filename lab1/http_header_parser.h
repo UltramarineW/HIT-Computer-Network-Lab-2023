@@ -1,27 +1,35 @@
 #ifndef HTTP_HEAD_PARSER_H
 #define HTTP_HEAD_PARSER_H
 
-#include "http_header_message.h"
+#include "http_message.h"
 #include <memory>
 #include <iostream>
 
 #define HTTP_PORT 80
 #define HTTPS_PORT 443
 
-class HTTP_Header_Parser{
+class HttpHeaderParser{
 
 public:
     // parser constructor
-    HTTP_Header_Parser();
+    HttpHeaderParser();
 
-    // parse http message
-    bool Parse(char *buffer);
+    // parse http request message
+    bool ParseRequest(char *buffer);
+
+    // parse http response message
+    bool ParseResponse(char* buffer);
     
-    // return http message after parse
-    HTTPHeader GetHeaderMessage();
+    // return http header message after parse
+    HttpHeader GetHeaderMessage();
+
+    // return http message
+    HttpMessage GetHttpMessage();
+
 
 private:
-    std::unique_ptr<HTTPHeader> http_header;
+    std::unique_ptr<HttpHeader> http_header_;
+    std::unique_ptr<HttpMessage> http_message_;
 };
 
 #endif

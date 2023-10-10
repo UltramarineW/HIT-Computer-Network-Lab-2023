@@ -5,17 +5,23 @@
 #include <iostream>
 
 
-struct HTTPHeader{
+struct HttpHeader{
+    // request
     char method[8];
     char url[1024];
     int port;
     char host[1024];
     char user_agent[1024];
     char cookie[1024*10];
-    HTTPHeader () {
-        ZeroMemory(this, sizeof(HTTPHeader));
+    // response
+    size_t state_word;
+    size_t body_len;
+    char if_modified_since[1024];
+    HttpHeader () {
+        ZeroMemory(this, sizeof(HttpHeader));
     }
-    friend std::ostream& operator<< (std::ostream& out, const HTTPHeader& header)
+
+    friend std::ostream& operator<< (std::ostream& out, const HttpHeader& header)
     {
         out << "method: " << header.method
             << "\nurl: " << header.url
@@ -26,5 +32,11 @@ struct HTTPHeader{
         return out;
     }
 };
+
+struct HttpMessage {
+    HttpHeader* header;
+    char *body;
+};
+
 
 #endif

@@ -2,17 +2,14 @@
 
 # set(EXECUTABLE_OUTPUT_PATH ${CMAKE_SOURCE_DIR}/bin)
 
-include_directories(.)
-
-set (SRCS proxy_server.cpp 
-          ThreadPool.cpp
-          http_header_parser.cpp
-          proxy_task.cpp
+set (SRCS proxy_server.cpp
+        thread_pool.cpp
+        http_header_parser.cpp
+        proxy_task.cpp
         http_filter.cpp
-        http_filter.h)
+        cache.cpp)
 
 add_executable(proxy_server main.cpp ${SRCS})
-# add_executable(proxy_server main.cpp)
 
 # add gflags support
 

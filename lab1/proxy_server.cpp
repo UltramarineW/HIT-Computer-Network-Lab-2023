@@ -1,7 +1,7 @@
 #include "proxy_server.h"
 
- ProxyServer::ProxyServer(int port) : _pool(FLAGS_thread_nums), server_port(port) {
-     _filter_ptr = std::make_shared<HTTPFilter>(
+ ProxyServer::ProxyServer(int port) : pool_(FLAGS_thread_nums), server_port_(port), server_socket_(0) {
+     filter_ptr_ = std::make_shared<HttpFilter>(
              R"(E:\HIT_Project\HIT-Computer-Network-Lab-2023\lab1\list\website_white_list.txt)",
              R"(E:\HIT_Project\HIT-Computer-Network-Lab-2023\lab1\list\website_black_list.txt)",R"(E:\HIT_Project\HIT-Computer-Network-Lab-2023\lab1\list\user_white_list.txt)",
              R"(E:\HIT_Project\HIT-Computer-Network-Lab-2023\lab1\list\user_black_list.txt)");
@@ -31,22 +31,22 @@ bool ProxyServer::InitSocket() {
     std::cout << "[Info] Init socket success" << std::endl;
 
     // 服务器端创建socket
-    _server_socket = socket(AF_INET, SOCK_STREAM, 0);
-    if (INVALID_SOCKET == _server_socket) {
+    server_socket_ = socket(AF_INET, SOCK_STREAM, 0);
+    if (INVALID_SOCKET == server_socket_) {
         std::cerr << "[Error] Create server socket failed, error code: " << WSAGetLastError() << std::endl;
         return false;
     }
 
     // 绑定并监听端口
-    _server_sockaddr.sin_family = AF_INET;
-    _server_sockaddr.sin_port = htons(server_port);
-    _server_sockaddr.sin_addr.S_un.S_addr = INADDR_ANY;
-    if (bind(_server_socket, (sockaddr *) &_server_sockaddr, sizeof(sockaddr)) == SOCKET_ERROR) {
+    server_sockaddr_.sin_family = AF_INET;
+    server_sockaddr_.sin_port = htons(server_port_);
+    server_sockaddr_.sin_addr.S_un.S_addr = INADDR_ANY;
+    if (bind(server_socket_, (sockaddr *) &server_sockaddr_, sizeof(sockaddr)) == SOCKET_ERROR) {
         std::cerr << "[Error] Bind socket failed" << std::endl;
         return false;
     }
-    if (listen(_server_socket, SOMAXCONN) == SOCKET_ERROR) {
-        std::cerr << "[Error] Listen port " << server_port << " failed" << std::endl;
+    if (listen(server_socket_, SOMAXCONN) == SOCKET_ERROR) {
+        std::cerr << "[Error] Listen port " << server_port_ << " failed" << std::endl;
         return false;
     }
     return true;
@@ -61,30 +61,29 @@ void ProxyServer::Start() {
     SOCKET accept_socket = INVALID_SOCKET;
     std::unique_ptr<ProxyParam> lp_proxy_param = std::make_unique<ProxyParam>();
 
-    // start thread _pool
-    _pool.start();
+    // start thread pool_
+    pool_.start();
 
     while (true) {
         std::cout << std::endl;
         std::cout << "[Info] Starting accept socket" << std::endl;
-        accept_socket = accept(_server_socket, nullptr, nullptr);
+        accept_socket = accept(server_socket_, nullptr, nullptr);
         if (accept_socket == SOCKET_ERROR) {
             std::cerr << "[Error] Accept socket error" << std::endl;
         }
-        if (lp_proxy_param == nullptr) {
-            continue;
-        }
         lp_proxy_param->client_socket = accept_socket;
 
+        std::cout << "Proxy task add to list, client socket: " << lp_proxy_param -> client_socket << std::endl;
+
         // add task to the thread pool
-        _pool.add_task([&lp_proxy_param, this]{
-            ProxyTask proxy_task(*lp_proxy_param, _filter_ptr);
+        pool_.add_task([&lp_proxy_param, this]{
+            ProxyTask proxy_task(*lp_proxy_param, filter_ptr_);
             proxy_task.Run();
         });
 
         Sleep(200);
     }
 
-    closesocket(_server_socket);
+    closesocket(server_socket_);
     WSACleanup();
 }

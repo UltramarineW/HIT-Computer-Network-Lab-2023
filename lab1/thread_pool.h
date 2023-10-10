@@ -26,12 +26,12 @@ public:
 private:
 	void work(); 
 
-	size_t _th_cnt; 
-	std::atomic_bool _is_running; 
-	std::mutex _mtx; 
-	std::condition_variable _cond;
-	std::thread *_threads; 
-	std::queue<Task> _tasks; 
+	size_t th_cnt_;
+	std::atomic_bool is_running_;
+	std::mutex mtx_;
+	std::condition_variable cond_;
+	std::thread *threads_;
+	std::queue<Task> tasks_;
 };
 
 #endif

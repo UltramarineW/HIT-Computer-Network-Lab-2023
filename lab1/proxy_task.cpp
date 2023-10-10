@@ -6,13 +6,10 @@
 
 #include <utility>
 
-ProxyTask::ProxyTask(ProxyParam lpParameter, std::shared_ptr<HTTPFilter> filter_ptr) : _proxy_parameter(lpParameter) {
-    _parser_ptr = std::make_unique<HTTP_Header_Parser>();
-    _filter_ptr = std::move(filter_ptr);
-}
+ProxyTask::ProxyTask(ProxyParam lpParameter, std::shared_ptr<HttpFilter> filter_ptr) : proxy_parameter_(lpParameter), parser_ptr_(std::make_unique<HttpHeaderParser>()), filter_ptr_(filter_ptr), add_modify_(false){}
 
 void ProxyTask::Run() {
-    std::cout << "[Info] Run proxy task: client socket: " << _proxy_parameter.client_socket << std::endl;
+    std::cout << "[Info] Run proxy task: client socket: " << proxy_parameter_.client_socket << std::endl;
 
     int recv_size;
     int ret;
@@ -21,68 +18,75 @@ void ProxyTask::Run() {
     char *CacheBuffer;
     ZeroMemory(buffer, MAXSIZE);
     SOCKADDR_IN client_addr;
-    // receive http message from client
-    recv_size = recv(_proxy_parameter.client_socket, buffer, MAXSIZE, 0);
+    DWORD wait_time = 0;
+
+    // receive http request from client
+    recv_size = recv(proxy_parameter_.client_socket, buffer, MAXSIZE, 0);
+    std::cout << "[Info] Receive request message from client" << std::endl;
     if (recv_size <= 0) {
         std::cerr << "[Error] Receive message size <= 0" << std::endl;
-        closesocket(_proxy_parameter.client_socket);
-        Sleep(200);
+        CloseSocketAndWait(wait_time);
         return;
     }
 
     CacheBuffer = new char[recv_size + 1];
     ZeroMemory(CacheBuffer, recv_size + 1);
     memcpy(CacheBuffer, buffer, recv_size);
-    _parser_ptr->Parse(CacheBuffer);
+    parser_ptr_->ParseRequest(CacheBuffer);
     delete CacheBuffer;
     // request message
-    std::cout << _parser_ptr->GetHeaderMessage() << std::endl;
 
-    // https filter
-    if (std::string(_parser_ptr->GetHeaderMessage().method) == "CONNECT") {
+    // filter https message
+    if (std::string(parser_ptr_->GetHeaderMessage().method) == "CONNECT") {
         std::cout << "[Info] HTTPS message, pass" << std::endl;
-        Sleep(200);
+        CloseSocketAndWait(wait_time);
         return;
     }
 
     // filter http message
-    if (!_filter_ptr->Filter(_parser_ptr->GetHeaderMessage())) {
-        std::cout << "[Info] Block a request from " << _parser_ptr->GetHeaderMessage().host << std::endl;
-        closesocket(_proxy_parameter.client_socket);
-        Sleep(200);
+    if (!filter_ptr_->Filter(parser_ptr_->GetHeaderMessage())) {
+        std::cout << "[Info] Block a request from " << parser_ptr_->GetHeaderMessage().host << std::endl;
+        CloseSocketAndWait(wait_time);
         return;
     }
+
+    AddHeaderCacheSegment(parser_ptr_->GetHeaderMessage(), buffer);
 
     // connect to server
-    if (!ConnectToServer(&_proxy_parameter.server_socket, _parser_ptr->GetHeaderMessage().host,
-                         _parser_ptr->GetHeaderMessage().port)) {
+    if (!ConnectToServer(&proxy_parameter_.server_socket, parser_ptr_->GetHeaderMessage().host,
+                         parser_ptr_->GetHeaderMessage().port)) {
         std::cerr << "[Error] Connect to server failed" << std::endl;
-        closesocket(_proxy_parameter.client_socket);
+        CloseSocketAndWait(wait_time);
         return;
     }
-    std::cout << "[Info] Proxy server connected to host " << _parser_ptr->GetHeaderMessage().host << " success" << std::endl;
+    std::cout << "[Info] Proxy server connected to host " << parser_ptr_->GetHeaderMessage().host << " success" << std::endl;
 
     // send http message to server
-    ret = send(_proxy_parameter.server_socket, buffer, strlen(buffer) + 1, 0);
+    ret = send(proxy_parameter_.server_socket, buffer, strlen(buffer) + 1, 0);
+
+    std::cout << "[Info] Send message to " << parser_ptr_->GetHeaderMessage().host << std::endl;
 
     // receive server data
-    recv_size = recv(_proxy_parameter.server_socket, buffer, MAXSIZE, 0);
+    recv_size = recv(proxy_parameter_.server_socket, buffer, MAXSIZE, 0);
+
+    std::cout << "[Info] Receive message from " << parser_ptr_->GetHeaderMessage().host << std::endl;
 
     if (recv_size <= 0) {
         std::cerr << "[Error] Receive server host message size <= 0" << std::endl;
-        closesocket(_proxy_parameter.client_socket);
-        closesocket(_proxy_parameter.server_socket);
-        Sleep(200);
+        CloseSocketAndWait(wait_time);
         return;
     }
 
-    // resend message to client
-    ret = send(_proxy_parameter.client_socket, buffer, sizeof(buffer), 0);
+     ProcessAndCacheResponse(buffer, recv_size, parser_ptr_->GetHeaderMessage());
 
-    closesocket(_proxy_parameter.client_socket);
-    closesocket(_proxy_parameter.server_socket);
-    Sleep(200);
-    std::cout << "[Info] Success. Proxy task end " << std::endl;
+    // resend message to client
+//    std::cout << buffer << std::endl;
+    ret = send(proxy_parameter_.client_socket, buffer, sizeof(buffer), 0);
+
+    std::cout << "[Info] Resend response message to client" << std::endl;
+
+    CloseSocketAndWait(0);
+    std::cout << "[Info] Success, Proxy task end, close client socket: " << proxy_parameter_.client_socket << " server socket: " << proxy_parameter_.server_socket << std::endl;
 }
 
 bool ProxyTask::ConnectToServer(SOCKET *server_socket, char *host, int port) {
@@ -107,6 +111,39 @@ bool ProxyTask::ConnectToServer(SOCKET *server_socket, char *host, int port) {
     return true;
 }
 
-bool ProxyTask::WebSiteFilter(HTTPHeader *http_header) {
+void ProxyTask::CloseSocketAndWait(DWORD wait_time) const {
+    closesocket(proxy_parameter_.client_socket);
+    closesocket(proxy_parameter_.client_socket);
+    Sleep(wait_time);
+}
+
+void ProxyTask::AddHeaderCacheSegment(HttpHeader header, char* buffer) {
+    Cache* cache = Cache::GetInstance();
+    CacheInstance *instance = cache->Find(header.host, header.url);
+    char *if_modified_since_str = "\r\nIf-Modified-Since: ";
+    char *modified_time = instance->modified_gmt;
+    // find instance in cache
+    if (instance != nullptr && header.if_modified_since[0] == '\0') {
+        strcat(buffer, if_modified_since_str);
+        strcat(buffer, modified_time);
+        add_modify_ = true;
+        std::cout << "[Info] Add If-Modified-Since segment" << std::endl;
+    }
+}
+
+void ProxyTask::ProcessAndCacheResponse(char *buffer, size_t recv_size, const HttpHeader& request_header) const {
+    char *cache_buffer = new char[recv_size+1];
+    ZeroMemory(cache_buffer, recv_size+1);
+    memcpy(cache_buffer, buffer, recv_size);
+
+    // continue to process http response message
+    parser_ptr_->ParseResponse(cache_buffer);
+
+    if (parser_ptr_->GetHeaderMessage().state_word == 200
+        && parser_ptr_->GetHttpMessage().body != nullptr) {
+        auto cache_instance = Cache::GetInstance();
+        std::cout << "[Info] Add cache line" << std::endl;
+        cache_instance->Add(parser_ptr_->GetHttpMessage());
+    }
 
 }

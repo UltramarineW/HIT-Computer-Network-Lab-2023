@@ -8,9 +8,10 @@
 #include <string>
 #include "winsock2.h"
 #include "gflags/gflags.h"
-#include "http_header_message.h"
+#include "http_message.h"
 #include "http_header_parser.h"
 #include "http_filter.h"
+#include "cache.h"
 
 #define HTTP_PORT 80
 #define HTTPS_PORT 443
@@ -25,18 +26,21 @@ struct ProxyParam {
 class ProxyTask {
 public:
 
-    explicit ProxyTask(ProxyParam lpParameter, std::shared_ptr<HTTPFilter> filter_ptr);
+    explicit ProxyTask(ProxyParam lpParameter, std::shared_ptr<HttpFilter> filter_ptr);
 
     void Run();
 
 private:
 
     static bool ConnectToServer(SOCKET *server_socket, char *host, int port);
-    static bool WebSiteFilter(HTTPHeader* http_header);
+    void CloseSocketAndWait(DWORD wait_time) const;
+    void AddHeaderCacheSegment(HttpHeader header, char* buffer);
+    void ProcessAndCacheResponse(char* buffer, size_t recv_size,const HttpHeader& request_header) const;
 
-    ProxyParam _proxy_parameter;
-    std::unique_ptr<HTTP_Header_Parser> _parser_ptr;
-    std::shared_ptr<HTTPFilter> _filter_ptr;
+    ProxyParam proxy_parameter_;
+    std::unique_ptr<HttpHeaderParser> parser_ptr_;
+    std::shared_ptr<HttpFilter> filter_ptr_;
+    bool add_modify_;
 };
 
 

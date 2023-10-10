@@ -3,9 +3,9 @@
 
 #include <iostream>
 #include <winsock2.h>
-#include "http_header_message.h"
+#include "http_message.h"
 #include "http_header_parser.h"
-#include "ThreadPool.h"
+#include "thread_pool.h"
 #include "proxy_task.h"
 #include "gflags/gflags.h"
 
@@ -27,12 +27,12 @@ private:
 
     // 连接服务器端
 
-    int server_port;
+    int server_port_;
     // TODO: 多线程支持
-    ThreadPool _pool;
-    SOCKET _server_socket;
-    sockaddr_in _server_sockaddr;
-    std::shared_ptr<HTTPFilter> _filter_ptr;
+    ThreadPool pool_;
+    SOCKET server_socket_;
+    sockaddr_in server_sockaddr_;
+    std::shared_ptr<HttpFilter> filter_ptr_;
 };
 
 #endif
