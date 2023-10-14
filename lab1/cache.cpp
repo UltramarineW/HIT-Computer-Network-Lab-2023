@@ -15,7 +15,7 @@ Cache* Cache::GetInstance() {
     return instance_;
 }
 
-int Cache::Add(HttpMessage http_message) {
+int Cache::Add(HttpMessage http_message, char* buffer) {
     std::lock_guard<std::mutex> lock(mtx_);
     auto it = cache_map_.begin();
     while (it != cache_map_.end()) {
@@ -25,34 +25,45 @@ int Cache::Add(HttpMessage http_message) {
         it++;
     }
 
+    auto buffer_string = std::string(buffer);
+    std::string last_modified_string;
+    auto last_modified = buffer_string.find("Last-Modified: ");
+    if (last_modified == std::string::npos) {
+        std::cout << "[Info] Can't find last modified segment" << std::endl;
+        return 0;
+    } else {
+        auto buffer_substring = buffer_string.substr(last_modified + 15);
+        auto last_modified_end = buffer_substring.find("\r\n");
+        last_modified_string = buffer_substring.substr(0, last_modified_end);
+    }
+
     size_t instance_id;
 
     if (it == cache_map_.end()) {
         CacheInstance instance{*http_message.header};
-        cache_map_.push_back(instance);
         instance_id = instance.id;
+        instance.modified_gmt = last_modified_string;
+        cache_map_.push_back(instance);
     } else {
         it->body_len = http_message.header->body_len;
         instance_id = it->id;
+        it->modified_gmt = last_modified_string;
     }
     char filename[100]; // 保存文件名
 	snprintf(filename, sizeof(filename), "E:/HIT_Project/HIT-Computer-Network-Lab-2023/lab1/cache/%zu", instance_id); // 保存在cache目录下
     std::cout << filename << std::endl;
 
-    std::ofstream cache_file((std::string(filename)));
+    std::ofstream cache_file(std::string(filename), std::ios::out);
     if (!cache_file.is_open()) {
         std::cerr << "[Error] Cache file created fail" << std::endl;
         return -1;
     }
-    cache_file << std::string(http_message.body);
+    cache_file <<  std::string(buffer);
     cache_file.close();
 
-
-//	FILE *f = fopen(filename, "w");
-//	fwrite(http_message.body, http_message.header->body_len, 1, f);
-//	fclose(f);
     return 0;
 }
+
 
 CacheInstance* Cache::Find(const std::string &hostname, const std::string &url) {
     auto it = cache_map_.begin();

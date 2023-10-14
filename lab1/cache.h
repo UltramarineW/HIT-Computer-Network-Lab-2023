@@ -22,7 +22,7 @@ struct CacheInstance{
     string hostname;
     string url;
     size_t body_len;
-    char modified_gmt[30] = {'\0'};
+    std::string modified_gmt;
     std::hash<string> hash_str;
 
     CacheInstance(HttpHeader header) {
@@ -30,7 +30,6 @@ struct CacheInstance{
         this->hostname = header.host;
         this->url = header.url;
         this->body_len = header.body_len;
-        strcpy(this->modified_gmt, header.if_modified_since);
     }
 };
 
@@ -40,7 +39,8 @@ class Cache {
 public:
     static Cache* GetInstance();
 
-    int Add(HttpMessage http_message);
+    int Add(HttpMessage http_message, char* buffer);
+
 
     CacheInstance *Find(const string &hostname, const string &url);
 

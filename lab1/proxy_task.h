@@ -12,11 +12,14 @@
 #include "http_header_parser.h"
 #include "http_filter.h"
 #include "cache.h"
+#include "gflags/gflags.h"
 
 #define HTTP_PORT 80
 #define HTTPS_PORT 443
-#define MAXSIZE 65507
+#define MAXSIZE 1000000
 
+DECLARE_int32(fishing_function);
+DECLARE_bool(use_cache);
 
 struct ProxyParam {
     SOCKET client_socket;
@@ -27,6 +30,8 @@ class ProxyTask {
 public:
 
     explicit ProxyTask(ProxyParam lpParameter, std::shared_ptr<HttpFilter> filter_ptr);
+
+    ~ProxyTask() {delete[] buffer;}
 
     void Run();
 
@@ -41,6 +46,7 @@ private:
     std::unique_ptr<HttpHeaderParser> parser_ptr_;
     std::shared_ptr<HttpFilter> filter_ptr_;
     bool add_modify_;
+    char *buffer;
 };
 
 

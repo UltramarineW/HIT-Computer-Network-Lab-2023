@@ -8,7 +8,7 @@
 #define HTTP_PORT 80
 #define HTTPS_PORT 443
 
-class HttpHeaderParser{
+class HttpHeaderParser {
 
 public:
     // parser constructor
@@ -18,8 +18,8 @@ public:
     bool ParseRequest(char *buffer);
 
     // parse http response message
-    bool ParseResponse(char* buffer);
-    
+    bool ParseResponse(char *buffer);
+
     // return http header message after parse
     HttpHeader GetHeaderMessage();
 

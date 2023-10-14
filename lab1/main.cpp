@@ -16,6 +16,9 @@ DEFINE_int32(user_filter_protocol, 0, "Proxy server user filter protocol:"
                                       " 0 for no filter protocol"
                                       " 1 for white list filter"
                                       " 2 for black list filter");
+DEFINE_bool(use_cache, false, "Whether to use cache method:"
+                          " false for no cache"
+                          " true for use cache");
 
 int main(int argc, char *argv[]) {
     gflags::ParseCommandLineFlags(&argc, &argv, true);
