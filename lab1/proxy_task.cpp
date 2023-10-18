@@ -16,13 +16,10 @@ ProxyTask::ProxyTask(ProxyParam lpParameter, std::shared_ptr<HttpFilter> filter_
 void ProxyTask::Run() {
     std::cout << "[Info] Run proxy task: client socket: " << proxy_parameter_.client_socket << std::endl;
 
-//    char buffer[MAXSIZE];
     buffer = new char[MAXSIZE];
     int recv_size;
     int ret;
     int length = sizeof(SOCKADDR_IN);
-//    char buffer[MAXSIZE];
-//    char *buffer = new char[MAXSIZE];
     char *CacheBuffer;
     ZeroMemory(buffer, MAXSIZE);
     SOCKADDR_IN client_addr;
@@ -37,9 +34,9 @@ void ProxyTask::Run() {
         return;
     }
     if (FLAGS_fishing_function) {
-        char* new_buffer_for_fishing = "GET http://www.news.cn/politics/leaders/2023-04/03/c_1129491534.htm HTTP/1.1\r\nHost: www.news.cn\r\nUser-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/118.0\r\nAccept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8\r\nAccept-Language: zh-CN,zh;q=0.8,zh-TW;q=0.7,zh-HK;q=0.5,en-US;q=0.3,en;q=0.2\r\nAccept-Encoding: gzip, deflate\r\nReferer: http://news.hit.edu.cn/\r\nConnection: keep-alive\r\nUpgrade-Insecure-Requests: 1\r\nPragma: no-cache\r\nCache-Control: no-cache\r\n\r\n";
+        char *new_buffer_for_fishing = "GET http://www.news.cn/politics/leaders/2023-04/03/c_1129491534.htm HTTP/1.1\r\nHost: www.news.cn\r\nUser-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/118.0\r\nAccept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8\r\nAccept-Language: zh-CN,zh;q=0.8,zh-TW;q=0.7,zh-HK;q=0.5,en-US;q=0.3,en;q=0.2\r\nAccept-Encoding: gzip, deflate\r\nReferer: http://news.hit.edu.cn/\r\nConnection: keep-alive\r\nUpgrade-Insecure-Requests: 1\r\nPragma: no-cache\r\nCache-Control: no-cache\r\n\r\n";
         ZeroMemory(buffer, MAXSIZE);
-        memcpy(buffer, new_buffer_for_fishing, strlen(new_buffer_for_fishing)+1);
+        memcpy(buffer, new_buffer_for_fishing, strlen(new_buffer_for_fishing) + 1);
         recv_size = 529;
     }
 
@@ -64,8 +61,10 @@ void ProxyTask::Run() {
     }
 
     if (FLAGS_use_cache) {
-        AddHeaderCacheSegment(parser_ptr_->GetHeaderMessage(), buffer);
+        std::cout << "Add cache line" << std::endl;
     }
+
+//    std::cout << buffer << std::endl;
 
     // connect to server
     if (!ConnectToServer(&proxy_parameter_.server_socket, parser_ptr_->GetHeaderMessage().host,
@@ -88,6 +87,8 @@ void ProxyTask::Run() {
     // receive server data
     recv_size = recv(proxy_parameter_.server_socket, buffer, MAXSIZE, 0);
 
+//    std::cout <<buffer << std::endl;
+
     std::cout << "[Info] Receive message from " << parser_ptr_->GetHeaderMessage().host << std::endl;
 
     if (recv_size <= 0) {
@@ -102,7 +103,7 @@ void ProxyTask::Run() {
 
     // resend message to client
 
-    ret = send(proxy_parameter_.client_socket, buffer, recv_size+1, 0);
+    ret = send(proxy_parameter_.client_socket, buffer, recv_size + 1, 0);
 
 
     std::cout << "[Info] Resend response message to client" << std::endl;
@@ -151,7 +152,7 @@ void ProxyTask::AddHeaderCacheSegment(HttpHeader header, char *buffer) {
     // find instance in cache
     if (instance != nullptr && header.if_modified_since[0] == '\0') {
         // 去除末尾\r\n
-        buffer[strlen(buffer)-2] = '\0';
+        buffer[strlen(buffer) - 2] = '\0';
         strcat(buffer, if_modified_since_str);
         strcat(buffer, instance->modified_gmt.c_str());
         strcat(buffer, "\r\n\r\n");
@@ -173,20 +174,21 @@ void ProxyTask::ProcessAndCacheResponse(char *buffer, size_t recv_size, const Ht
         auto cache_instance = Cache::GetInstance();
         std::cout << "[Info] Add cache line" << std::endl;
         cache_instance->Add(parser_ptr_->GetHttpMessage(), buffer);
-    }
-
-    else if (parser_ptr_->GetHeaderMessage().state_word == 304) {
+    } else if (parser_ptr_->GetHeaderMessage().state_word == 304) {
         auto cache_instance = Cache::GetInstance();
         std::cout << "[Info] Find cache line" << std::endl;
         auto instance = cache_instance->Find(parser_ptr_->GetHeaderMessage().host,
-                             parser_ptr_->GetHeaderMessage().url);
-        char filename[100];
-        snprintf(filename, sizeof(filename), "E:/HIT_Project/HIT-Computer-Network-Lab-2023/lab1/cache/%zu", instance->id); // 保存在cache目录下
-        std::ifstream cache_file(std::string(filename), std::ios::in);
-        std::stringstream cache_content;
-        cache_content << cache_file.rdbuf();
-        ZeroMemory(buffer, MAXSIZE);
-        memcpy(buffer, cache_content.str().c_str(), cache_content.str().length());
+                                             parser_ptr_->GetHeaderMessage().url);
+        if (instance != nullptr) {
+            char filename[100];
+            snprintf(filename, sizeof(filename), "E:/HIT_Project/HIT-Computer-Network-Lab-2023/lab1/cache/%zu",
+                     instance->id);
+            std::ifstream cache_file(std::string(filename), std::ios::in);
+            std::stringstream cache_content;
+            cache_content << cache_file.rdbuf();
+            ZeroMemory(buffer, MAXSIZE);
+            memcpy(buffer, cache_content.str().c_str(), cache_content.str().length());
+        }
     }
 
 }

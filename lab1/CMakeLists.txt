@@ -7,7 +7,8 @@ set (SRCS proxy_server.cpp
         http_header_parser.cpp
         proxy_task.cpp
         http_filter.cpp
-        cache.cpp)
+        cache.cpp
+        ../lab2/main.cpp)
 
 add_executable(proxy_server main.cpp ${SRCS})
 

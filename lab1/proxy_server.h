@@ -23,12 +23,7 @@ private:
     // 服务器端初始化socket
     bool InitSocket();
 
-    // 线程执行函数
-
-    // 连接服务器端
-
     int server_port_;
-    // TODO: 多线程支持
     ThreadPool pool_;
     SOCKET server_socket_;
     sockaddr_in server_sockaddr_;
