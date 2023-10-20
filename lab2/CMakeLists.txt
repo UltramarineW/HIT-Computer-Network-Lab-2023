@@ -1,7 +1,7 @@
 set (LAB2_SOURCE main.cpp
         GBN_client.cpp
         GBN_server.cpp
-        transfer_massage.h
+        transfer_message.h
         utils.h
         utils.cpp)
 

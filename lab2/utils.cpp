@@ -4,11 +4,11 @@
 
 #include "utils.h"
 
-std::string MessageToString(const TransferMassage& message){
+std::string MessageToString(const TransferMessage& message){
     return fmt::format("Seq: {}\r\nAck: {}\r\nData: {}", message.seq, message.ack, message.data);
 }
 
-int StringToMessage(const std::string& transfer_string, TransferMassage& message){
+int StringToMessage(const std::string& transfer_string, TransferMessage& message){
     std::regex pattern(R"(Seq: (\d+)\r\nAck: (\d+)\r\nData: (.*)$)");
     std::smatch matches;
 

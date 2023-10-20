@@ -13,7 +13,7 @@
 #include <cstdio>
 #include <cstring>
 #include <fmt/format.h>
-#include "transfer_massage.h"
+#include "transfer_message.h"
 #include "utils.h"
 
 
@@ -25,9 +25,16 @@ public:
     int Start();
 
 private:
-    int ProcessServerMessage (TransferMassage& message) const;
+    int ProcessServerMessage (const std::string& message, std::string& client_message);
+    int InitClientServerSocket();
+    int HandshakeProcess();
+    int SendClientMessage(char* buffer);
+
     unsigned int port_;
     string ip_;
+    SOCKET client_socket_;
+    sockaddr_in addr_server_;
+    int base_;
 };
 
 
