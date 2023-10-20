@@ -5,7 +5,7 @@
 #include "GBN_server.h"
 #include "transfer_message.h"
 
-GBNServer::GBNServer(const unsigned int& port, std::string ip) : port_(port), ip_(std::move(ip)), base_(0){
+GBNServer::GBNServer(const unsigned int& port, std::string ip) : port_(port), ip_(std::move(ip)), base_(0), next_seq_num_(0){
     spdlog::debug("udp server start");
     send_data_ = std::make_unique<std::vector<std::string>>();
     for (int i = 0; i < 100; i++) {
@@ -29,41 +29,37 @@ int GBNServer::Start() {
 
     char message[BUFFER_LENGTH];
     ZeroMemory(message, BUFFER_LENGTH);
-    TransferMessage server_first_message;
-    server_first_message.seq = 0;
-    server_first_message.ack = 0;
-    server_first_message.data = send_data_->at(0);
-    std::string server_message = MessageToString(server_first_message);
-
-
+    TransferMessage server_message;
 
     // start communication
     while (true) {
-        if (base_ == send_data_->size() - 1) break;
+        if (base_ == send_data_->size()) break;
         // server send message
-        if (next_seq_num_ - base_ + 1 <= SEND_WIND_SIZE && next_seq_num_ < send_data_->size()) {
-            std::thread send_thread([server_message, this](){
+        while (next_seq_num_ - base_ + 1 <= SEND_WIND_SIZE && next_seq_num_ < send_data_->size()) {
+            server_message.seq = next_seq_num_;
+            server_message.ack = 0;
+            server_message.data = send_data_->at(next_seq_num_);
+            auto server_message_string = MessageToString(server_message);
+
+            std::thread send_thread([server_message_string, this](){
                 char temp_message[BUFFER_LENGTH];
-                strcpy(temp_message, server_message.c_str());
+                strcpy(temp_message, server_message_string.c_str());
                 SendServerMessage(temp_message);
             });
-
-            next_seq_num_++;
+            Sleep(100);
             send_thread.detach();
-        } else {
-            Sleep(500);
-            continue;
+            next_seq_num_++;
         }
 
         // receive message from client
         int message_len;
         int slen = sizeof(sockaddr_in);
         ZeroMemory(message, BUFFER_LENGTH);
-        Sleep(1000);
 
         message_len = recvfrom(server_socket_, message, BUFFER_LENGTH, 0, (sockaddr*)&addr_client_, &slen);
         if (message_len == SOCKET_ERROR) {
-            spdlog::warn("server recv message from client failed, error code: {}", WSAGetLastError());
+            spdlog::warn("server recv message from client timeout, error code: {}", WSAGetLastError());
+            next_seq_num_ = base_;
             continue;
         } else {
             spdlog::debug("server receive message from {}:{}",
@@ -71,8 +67,9 @@ int GBNServer::Start() {
                                 ntohs(addr_client_.sin_port));
         }
 
-        if (ProcessClientMessage(std::string(message), server_message) < 0) {
+        if (ProcessClientMessage(std::string(message)) < 0) {
             spdlog::error("processing client message failed");
+            return -1;
         } else {
             spdlog::debug("process client message success");
         }
@@ -82,21 +79,17 @@ int GBNServer::Start() {
     return 0;
 }
 
-int GBNServer::ProcessClientMessage(const std::string& message, std::string& server_message) const {
+int GBNServer::ProcessClientMessage(const std::string& message) {
     // Parse transfer message
     TransferMessage client_message;
-    if (StringToMessage(std::string(message), client_message) == -1) {
-        spdlog::error("parse server message string failed");
+    if (StringToMessage(message, client_message) == -1) {
+        spdlog::error("parse client message string failed, message: {}", message);
         return -1;
     } else {
         spdlog::info("client->server: seq: {} ack: {} data: {}", client_message.seq, client_message.ack, client_message.data);
     }
 
-    client_message.seq = client_message.ack + 1;
-    client_message.ack = 0;
-    client_message.data = send_data_->at(client_message.seq);
-
-    server_message = MessageToString(client_message);
+    base_ = client_message.ack + 1;
     return 0;
 }
 
@@ -165,4 +158,5 @@ int GBNServer::SendServerMessage(char *temp_message) {
     } else {
         spdlog::debug("server send message success");
     }
+    return 0;
 }

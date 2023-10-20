@@ -25,7 +25,7 @@ public:
     int Start();
 
 private:
-    int ProcessServerMessage (const std::string& message, std::string& client_message);
+    int ProcessServerMessage (const std::string& message);
     int InitClientServerSocket();
     int HandshakeProcess();
     int SendClientMessage(char* buffer);
@@ -35,6 +35,7 @@ private:
     SOCKET client_socket_;
     sockaddr_in addr_server_;
     int base_;
+    int count_;
 };
 
 

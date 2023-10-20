@@ -6,7 +6,7 @@
 
 #include <utility>
 
-GBNClient::GBNClient(const unsigned int& port, std::string  ip) : port_(port), ip_(std::move(ip)), base_(0){
+GBNClient::GBNClient(const unsigned int& port, std::string  ip) : port_(port), ip_(std::move(ip)), base_(0), count_(0){
     spdlog::debug("udp client start");
 }
 
@@ -61,7 +61,7 @@ int GBNClient::Start() {
         spdlog::debug("client handshake process success");
     }
 
-    std::string client_transfer_message;
+    TransferMessage client_message;
     char buffer[BUFFER_LENGTH];
 
     // start communication
@@ -73,26 +73,34 @@ int GBNClient::Start() {
         answer_length = recvfrom(client_socket_, buffer, BUFFER_LENGTH, 0, (sockaddr*)&addr_server_, &slen);
 
         if (answer_length == SOCKET_ERROR) {
-            spdlog::warn("client recv from server failed, error code: {}", WSAGetLastError());
+            spdlog::warn("client recv from server timeout, error code: {}", WSAGetLastError());
             continue;
         } else {
             spdlog::debug("client receive message from {}:{}", inet_ntoa(addr_server_.sin_addr), htons(addr_server_.sin_port));
         }
 
-        if( ProcessServerMessage(std::string(buffer), client_transfer_message) < 0) {
+        if(ProcessServerMessage(std::string(buffer)) < 0) {
             spdlog::error("client process server message fail");
             return -1;
         } else {
             spdlog::debug("process server message success");
         }
+        client_message.ack = base_ - 1;
+        client_message.seq = 0;
+        client_message.data = "hello from client";
+        auto client_message_string = MessageToString(client_message);
 
-        std::thread send_thread([client_transfer_message, this](){
-            char temp_buffer[BUFFER_LENGTH];
-            ZeroMemory(temp_buffer, BUFFER_LENGTH);
-            strcpy(temp_buffer, client_transfer_message.c_str());
-            SendClientMessage(temp_buffer);
-        });
-        send_thread.detach();
+        if (count_ == 1) {
+            count_ = count_ + 1;
+        } else {
+            std::thread send_thread([client_message_string, this](){
+                char temp_buffer[BUFFER_LENGTH];
+                ZeroMemory(temp_buffer, BUFFER_LENGTH);
+                strcpy(temp_buffer, client_message_string.c_str());
+                SendClientMessage(temp_buffer);
+            });
+            send_thread.detach();
+        }
     }
 
     closesocket(client_socket_);
@@ -101,33 +109,27 @@ int GBNClient::Start() {
 }
 
 
-int GBNClient::ProcessServerMessage(const std::string& buffer, std::string& client_message) {
+int GBNClient::ProcessServerMessage(const std::string& buffer) {
     TransferMessage server_message;
     if (StringToMessage(buffer, server_message) == -1) {
-        spdlog::error("parse server message string failed");
+        spdlog::error("parse server message string failed, message: {}", buffer);
         return -1;
     } else {
         spdlog::info("server->client: seq: {} ack: {} data: {}", server_message.seq, server_message.ack, server_message.data);
     }
-
-    if (server_message.seq != base_) {
-        server_message.ack = base_;
-        server_message.seq = 0;
-        server_message.data = "hello from client";
-    }  else {
-        server_message.ack = server_message.seq;
-        server_message.seq = 0;
-        server_message.data = "hello from client";
-        base_++;
+    if (server_message.seq == base_) {
+        if (server_message.seq == 2 && count_ == 0) {
+            count_++;
+        } else {
+            base_++;
+        }
     }
 
-
-    client_message = MessageToString(server_message);
     return 0;
 }
 
 int GBNClient::SendClientMessage(char* buffer) {
-    Sleep(5000);
+    Sleep(1000);
     // send message
     if (sendto(client_socket_, buffer, strlen(buffer), 0, (sockaddr*)&addr_server_, sizeof(sockaddr_in)) == SOCKET_ERROR) {
         spdlog::error("client send message fail, error code: {}", WSAGetLastError());

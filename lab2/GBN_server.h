@@ -11,7 +11,7 @@
 #include <queue>
 #include "utils.h"
 
-#define SEND_WIND_SIZE 10
+#define SEND_WIND_SIZE 4
 
 class GBNServer {
 public:
@@ -19,7 +19,7 @@ public:
     int Start();
 
 private:
-    int ProcessClientMessage(const std::string& message, std::string& server_message) const;
+    int ProcessClientMessage(const std::string& message);
     int InitServerSocket();
     int SetSocketTimeout();
     int SendServerMessage(char* temp_message);
@@ -32,6 +32,7 @@ private:
     sockaddr_in addr_client_;
 
     std::unique_ptr<std::vector<std::string>> send_data_;
+    std::mutex mtx_;
     int base_;
     int next_seq_num_;
 };
