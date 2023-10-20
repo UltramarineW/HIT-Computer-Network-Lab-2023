@@ -1,6 +1,6 @@
 set (LAB2_SOURCE main.cpp
-        stop_wait_client.cpp
-        stop_wait_server.cpp
+        GBN_client.cpp
+        GBN_server.cpp
         transfer_massage.h
         utils.h
         utils.cpp)

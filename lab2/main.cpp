@@ -8,12 +8,13 @@
 #include <winsock2.h>
 #include <thread>
 
-#include "stop_wait_client.h"
-#include "stop_wait_server.h"
+#include "GBN_client.h"
+#include "GBN_server.h"
 #include "utils.h"
 
 DEFINE_uint32(port, 12400, "port for server to listen on and for client to bind");
 DEFINE_string(ip, "127.0.0.1", "IP address to listen on");
+DEFINE_bool(debug, false, "debug mode");
 
 int LoadSocketLibrary() {
     // load socket library
@@ -39,7 +40,11 @@ int LoadSocketLibrary() {
 int main(int argc, char *argv[]) {
     // Initialize third party libraries
     gflags::ParseCommandLineFlags(&argc, &argv, true);
-    spdlog::set_level(spdlog::level::info);
+    if (FLAGS_debug) {
+        spdlog::set_level(spdlog::level::debug);
+    } else {
+        spdlog::set_level(spdlog::level::info);
+    }
     spdlog::info("File transfer application start");
     // Initialize socket
     if (LoadSocketLibrary() < 0) {
@@ -47,8 +52,8 @@ int main(int argc, char *argv[]) {
     }
 
     // Create Server and Client
-    StopWaitServer server(FLAGS_port, FLAGS_ip);
-    StopWaitClient client(FLAGS_port, FLAGS_ip);
+    GBNServer server(FLAGS_port, FLAGS_ip);
+    GBNClient client(FLAGS_port, FLAGS_ip);
 
     std::thread server_thread([&server]() {
         int err = server.Start();

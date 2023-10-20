@@ -2,15 +2,15 @@
 // Created by wujiayang on 2023/10/17.
 //
 
-#include "stop_wait_client.h"
+#include "GBN_client.h"
 
 #include <utility>
 
-StopWaitClient::StopWaitClient(const unsigned int& port,std::string  ip) : port_(port), ip_(std::move(ip)){
+GBNClient::GBNClient(const unsigned int& port, std::string  ip) : port_(port), ip_(std::move(ip)){
     spdlog::info("udp client start");
 }
 
-int StopWaitClient::Start() {
+int GBNClient::Start() {
     // create client socket
     SOCKET client_socket = socket(AF_INET, SOCK_DGRAM, 0);
     if (client_socket == INVALID_SOCKET) {
@@ -33,7 +33,6 @@ int StopWaitClient::Start() {
         spdlog::error("set receive timeout fail");
     }
 
-    int random_seq = GetRandomInteger(SEQ_MIN, SEQ_MAX);
 
     TransferMassage client_transfer_message{0, 0, "hello from client"};
 
@@ -86,7 +85,7 @@ int StopWaitClient::Start() {
 }
 
 
-int StopWaitClient::ProcessServerMessage(TransferMassage &message) const {
+int GBNClient::ProcessServerMessage(TransferMassage &message) const {
     message.ack = (message.seq + 1);
     message.data = "hello from client";
     return 0;

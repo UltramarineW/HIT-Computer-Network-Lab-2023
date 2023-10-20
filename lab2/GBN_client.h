@@ -2,8 +2,8 @@
 // Created by wujiayang on 2023/10/17.
 //
 
-#ifndef COMPUTER_NETWORK_LAB_STOP_WAIT_CLIENT_H
-#define COMPUTER_NETWORK_LAB_STOP_WAIT_CLIENT_H
+#ifndef COMPUTER_NETWORK_LAB_GBN_CLIENT_H
+#define COMPUTER_NETWORK_LAB_GBN_CLIENT_H
 
 #include <string>
 #include <random>
@@ -19,9 +19,9 @@
 
 using std::string;
 
-class StopWaitClient {
+class GBNClient{
 public:
-    StopWaitClient(const unsigned int& port,std::string  ip);
+    GBNClient(const unsigned int& port, std::string  ip);
     int Start();
 
 private:
@@ -31,4 +31,4 @@ private:
 };
 
 
-#endif //COMPUTER_NETWORK_LAB_STOP_WAIT_CLIENT_H
+#endif //COMPUTER_NETWORK_LAB_GBN_CLIENT_H

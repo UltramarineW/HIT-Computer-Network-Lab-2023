@@ -2,14 +2,14 @@
 // Created by wujiayang on 2023/10/17.
 //
 
-#include "stop_wait_server.h"
+#include "GBN_server.h"
 #include "transfer_massage.h"
 
-StopWaitServer::StopWaitServer(const unsigned int& port, std::string ip) : port_(port), ip_(std::move(ip)){
+GBNServer::GBNServer(const unsigned int& port, std::string ip) : port_(port), ip_(std::move(ip)){
     spdlog::info("udp server start");
 }
 
-int StopWaitServer::Start() const {
+int GBNServer::Start() const {
     SOCKET server_socket = socket(AF_INET, SOCK_DGRAM, 0);
     if (server_socket == INVALID_SOCKET) {
         spdlog::error("create server socket error");
@@ -72,6 +72,7 @@ int StopWaitServer::Start() const {
 
         auto server_message = MessageToString(client_message);
 
+        Sleep(1000);
        // server send message
         strcpy(message, server_message.c_str());
         if (sendto(server_socket, message, strlen(message), 0, (sockaddr*)&addr_client, sizeof(sockaddr_in)) == SOCKET_ERROR) {
@@ -79,7 +80,6 @@ int StopWaitServer::Start() const {
         } else {
             spdlog::debug("server send message success");
         }
-        Sleep(1000);
 
 
     }
@@ -89,10 +89,10 @@ int StopWaitServer::Start() const {
     return 0;
 }
 
-int StopWaitServer::ProcessClientMessage(TransferMassage &message) const {
+int GBNServer::ProcessClientMessage(TransferMassage &message) const {
     message.data = "hello from server";
     message.ack = message.seq;
-    message.seq = (message.seq + 1) % (SEQ_MAX+1);
+    message.seq = (message.seq + 1) % (SEQ_SIZE);
     return 0;
 }
 
