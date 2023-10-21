@@ -13,29 +13,36 @@
 #include <cstdio>
 #include <cstring>
 #include <fmt/format.h>
+#include <fstream>
 #include "transfer_message.h"
 #include "utils.h"
 
 
 using std::string;
 
-class GBNClient{
+class GBNClient {
 public:
-    GBNClient(const unsigned int& port, std::string  ip);
+    GBNClient(const unsigned int &port, std::string ip);
+
     int Start();
 
 private:
-    int ProcessServerMessage (const std::string& message);
+    int ProcessServerMessage(const std::string &message);
+
     int InitClientServerSocket();
+
     int HandshakeProcess();
-    int SendClientMessage(char* buffer);
+
+    int SendClientMessage(char *buffer);
 
     unsigned int port_;
     string ip_;
     SOCKET client_socket_;
     sockaddr_in addr_server_;
+    std::unique_ptr<std::vector<std::string>> send_data_;
     int base_;
     int count_;
+    std::ofstream receive_file_;
 };
 
 

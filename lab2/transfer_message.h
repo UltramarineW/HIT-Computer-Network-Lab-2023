@@ -8,7 +8,7 @@
 #define BUFFER_LENGTH 1026
 // the seq number is an integer between [0, 19]
 
-struct TransferMessage{
+struct TransferMessage {
     int seq;
     int ack;
     std::string data;

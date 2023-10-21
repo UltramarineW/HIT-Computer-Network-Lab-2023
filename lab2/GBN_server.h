@@ -12,17 +12,23 @@
 #include "utils.h"
 
 #define SEND_WIND_SIZE 4
+#define SEND_MESSAGE_SIZE 100
 
 class GBNServer {
 public:
-    GBNServer(const unsigned int& port, std::string ip);
+    GBNServer(const unsigned int &port, std::string ip);
+
     int Start();
 
 private:
-    int ProcessClientMessage(const std::string& message);
+    int ProcessClientMessage(const std::string &message);
+
     int InitServerSocket();
+
     int SetSocketTimeout();
-    int SendServerMessage(char* temp_message);
+
+    int SendServerMessage(char *temp_message);
+
     int HandshakeProcess();
 
     unsigned int port_;
