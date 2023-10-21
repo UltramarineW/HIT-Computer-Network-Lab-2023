@@ -15,34 +15,34 @@ GBNClient::GBNClient(const unsigned int &port, std::string ip) : port_(port),
     spdlog::debug("udp client start");
 
     send_data_ = std::make_unique<std::vector<std::string>>();
-    for (int i = 0; i < 20; i++) {
+    // for test
+//    for (int i = 0; i < 20; i++) {
 //        std::string data_package = "client_data_package_" + std::to_string(i);
-        std::string data_package = std::to_string(i);
-        send_data_->push_back(std::move(data_package));
-    }
+//        send_data_->push_back(std::move(data_package));
+//    }
 
     // file transfer
-//    if (!receive_file_.is_open()) {
-//        spdlog::warn("client receive file doesn't open");
-//    } else {
-//        spdlog::debug("client receive file open successfully");
-//    }
-//
-//    std::ifstream file(R"(E:\HIT_Project\HIT-Computer-Network-Lab-2023\lab2\client_send_text.txt)");
-//    if (!file.is_open()) {
-//        spdlog::error("can't open file: {}", "client_send_text.txt");
-//        return;
-//    }
-//
-//    char buffer[SEND_MESSAGE_SIZE + 1];
-//    while (file.read(buffer, SEND_MESSAGE_SIZE)) {
-//        buffer[SEND_MESSAGE_SIZE] = '\0';
-//        send_data_->push_back(std::string(buffer));
-//    }
-//    if (file.gcount() > 0) {
-//        send_data_->push_back(std::string(buffer).substr(0, file.gcount()));
-//    }
-//    file.close();
+    if (!receive_file_.is_open()) {
+        spdlog::warn("client receive file doesn't open");
+    } else {
+        spdlog::debug("client receive file open successfully");
+    }
+
+    std::ifstream file(R"(E:\HIT_Project\HIT-Computer-Network-Lab-2023\lab2\client_send_text.txt)");
+    if (!file.is_open()) {
+        spdlog::error("can't open file: {}", "client_send_text.txt");
+        return;
+    }
+
+    char buffer[SEND_MESSAGE_SIZE + 1];
+    while (file.read(buffer, SEND_MESSAGE_SIZE)) {
+        buffer[SEND_MESSAGE_SIZE] = '\0';
+        send_data_->push_back(std::string(buffer));
+    }
+    if (file.gcount() > 0) {
+        send_data_->push_back(std::string(buffer).substr(0, file.gcount()));
+    }
+    file.close();
 
     spdlog::info("client send text read success, vector size: {}", send_data_->size());
 }
@@ -138,7 +138,6 @@ int GBNClient::Start() {
         if (over_ack > receive_base_) {
             client_message.ack = over_ack;
             client_message.seq = std::min(send_data_->size() - 1, static_cast<unsigned long long>(over_ack));
-            client_message.seq = 0;
             client_message.data = send_data_->at(client_message.seq);
             auto client_message_string = MessageToString(client_message);
 
@@ -158,7 +157,7 @@ int GBNClient::Start() {
                 continue;
             }
             client_message.ack = i;
-            client_message.seq = std::min(send_data_->size() - 1, static_cast<unsigned long long>(receive_base_ - 1));
+            client_message.seq = std::min(send_data_->size() - 1, static_cast<unsigned long long>(i));
             client_message.data = send_data_->at(client_message.seq);
 
             auto client_message_string = MessageToString(client_message);

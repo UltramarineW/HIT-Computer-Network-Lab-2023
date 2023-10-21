@@ -14,27 +14,33 @@ GBNServer::GBNServer(const unsigned int &port, std::string ip) : port_(port),
                                                                          R"(E:\HIT_Project\HIT-Computer-Network-Lab-2023\lab2\server_receive_text.txt)") {
     spdlog::debug("udp server start");
     send_data_ = std::make_unique<std::vector<std::string>>();
-    for (int i = 0; i < 20; i++) {
+    // for test
+//    for (int i = 0; i < 20; i++) {
 //        std::string data_package = "server_data_package_" + std::to_string(i);
-        std::string data_package = std::to_string(i);
-        send_data_->push_back(std::move(data_package));
-    }
+//        send_data_->push_back(std::move(data_package));
+//    }
 
     // file transfer
-//    std::ifstream file(R"(E:\HIT_Project\HIT-Computer-Network-Lab-2023\lab2\server_send_text.txt)");
-//    if (!file.is_open()) {
-//        spdlog::error("can't open file: {}", "server_send_text.txt");
-//        return;
-//    }
-//    char buffer[SEND_MESSAGE_SIZE + 1];
-//    while (file.read(buffer, SEND_MESSAGE_SIZE)) {
-//        buffer[SEND_MESSAGE_SIZE] = '\0';
-//        send_data_->push_back(std::string(buffer));
-//    }
-//    if (file.gcount() > 0) {
-//        send_data_->push_back(std::string(buffer).substr(0, file.gcount()));
-//    }
-//    file.close();
+    if (!receive_file_.is_open()) {
+        spdlog::warn("client receive file doesn't open");
+    } else {
+        spdlog::debug("client receive file open successfully");
+    }
+
+    std::ifstream file(R"(E:\HIT_Project\HIT-Computer-Network-Lab-2023\lab2\server_send_text.txt)");
+    if (!file.is_open()) {
+        spdlog::error("can't open file: {}", "server_send_text.txt");
+        return;
+    }
+    char buffer[SEND_MESSAGE_SIZE + 1];
+    while (file.read(buffer, SEND_MESSAGE_SIZE)) {
+        buffer[SEND_MESSAGE_SIZE] = '\0';
+        send_data_->push_back(std::string(buffer));
+    }
+    if (file.gcount() > 0) {
+        send_data_->push_back(std::string(buffer).substr(0, file.gcount()));
+    }
+    file.close();
 
     // receive data vector
     receive_data_ = std::make_unique<std::vector<std::string>>(send_data_->size(), "");
