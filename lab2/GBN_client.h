@@ -18,6 +18,7 @@
 #include "transfer_message.h"
 #include "utils.h"
 
+#define RECV_WIND_SIZE 4
 
 using std::string;
 
@@ -28,7 +29,7 @@ public:
     int Start();
 
 private:
-    int ProcessServerMessage(const std::string &message);
+    int ProcessServerMessage(const std::string &message, int &ack);
 
     int InitClientServerSocket();
 
@@ -40,12 +41,13 @@ private:
     string ip_;
     SOCKET client_socket_;
     sockaddr_in addr_server_;
+
     std::unique_ptr<std::vector<std::string>> send_data_;
-    int receive_base_;
-    int send_base_;
-    int next_seq_num_;
-    int count_;
+    std::map<int, std::string> receive_buffer_data_;
     std::ofstream receive_file_;
+    int receive_base_;
+    // use for package loss
+    int count_;
 };
 
 

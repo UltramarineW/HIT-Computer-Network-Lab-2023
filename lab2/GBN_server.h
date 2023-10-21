@@ -7,6 +7,8 @@
 
 #include <string>
 #include <spdlog/spdlog.h>
+#include <set>
+#include <algorithm>
 #include <winsock2.h>
 #include <queue>
 #include "utils.h"
@@ -39,10 +41,10 @@ private:
     std::unique_ptr<std::vector<std::string>> send_data_;
     std::mutex mtx_;
     int send_base_;
-    int receive_base_;
     int next_seq_num_;
     std::ofstream receive_file_;
     std::unique_ptr<std::vector<std::string>> receive_data_;
+    std::set<int> ack_windows_;
 };
 
 

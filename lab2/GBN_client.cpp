@@ -9,39 +9,41 @@
 GBNClient::GBNClient(const unsigned int &port, std::string ip) : port_(port),
                                                                  ip_(std::move(ip)),
                                                                  receive_base_(0),
-                                                                 next_seq_num_(0),
-                                                                 send_base_(0),
                                                                  count_(0),
                                                                  receive_file_(
                                                                          R"(E:\HIT_Project\HIT-Computer-Network-Lab-2023\lab2\client_receive_text.txt)") {
     spdlog::debug("udp client start");
 
     send_data_ = std::make_unique<std::vector<std::string>>();
-//    for (int i = 0; i < 20; i++) {
+    for (int i = 0; i < 20; i++) {
 //        std::string data_package = "client_data_package_" + std::to_string(i);
-//        send_data_->push_back(std::move(data_package));
+        std::string data_package = std::to_string(i);
+        send_data_->push_back(std::move(data_package));
+    }
+
+    // file transfer
+//    if (!receive_file_.is_open()) {
+//        spdlog::warn("client receive file doesn't open");
+//    } else {
+//        spdlog::debug("client receive file open successfully");
 //    }
-    if (!receive_file_.is_open()) {
-        spdlog::warn("client receive file doesn't open");
-    } else {
-        spdlog::debug("client receive file open successfully");
-    }
+//
+//    std::ifstream file(R"(E:\HIT_Project\HIT-Computer-Network-Lab-2023\lab2\client_send_text.txt)");
+//    if (!file.is_open()) {
+//        spdlog::error("can't open file: {}", "client_send_text.txt");
+//        return;
+//    }
+//
+//    char buffer[SEND_MESSAGE_SIZE + 1];
+//    while (file.read(buffer, SEND_MESSAGE_SIZE)) {
+//        buffer[SEND_MESSAGE_SIZE] = '\0';
+//        send_data_->push_back(std::string(buffer));
+//    }
+//    if (file.gcount() > 0) {
+//        send_data_->push_back(std::string(buffer).substr(0, file.gcount()));
+//    }
+//    file.close();
 
-    std::ifstream file(R"(E:\HIT_Project\HIT-Computer-Network-Lab-2023\lab2\client_send_text.txt)");
-    if (!file.is_open()) {
-        spdlog::error("can't open file: {}", "client_send_text.txt");
-        return;
-    }
-
-    char buffer[SEND_MESSAGE_SIZE + 1];
-    while (file.read(buffer, SEND_MESSAGE_SIZE)) {
-        buffer[SEND_MESSAGE_SIZE] = '\0';
-        send_data_->push_back(std::string(buffer));
-    }
-    if (file.gcount() > 0) {
-        send_data_->push_back(std::string(buffer).substr(0, file.gcount()));
-    }
-    file.close();
     spdlog::info("client send text read success, vector size: {}", send_data_->size());
 }
 
@@ -113,7 +115,6 @@ int GBNClient::Start() {
         if (answer_length == SOCKET_ERROR) {
             auto error_code = WSAGetLastError();
             spdlog::warn("client recv from server timeout, error code: {}", error_code);
-            next_seq_num_ = send_base_;
             if (error_code == 10093) {
                 break;
             }
@@ -124,22 +125,44 @@ int GBNClient::Start() {
                           htons(addr_server_.sin_port));
         }
 
-        if (ProcessServerMessage(std::string(buffer)) < 0) {
+        int last_receive_base = receive_base_;
+        int over_ack = 0;
+
+        if (ProcessServerMessage(std::string(buffer), over_ack) < 0) {
             spdlog::error("client process server message fail");
             return -1;
         } else {
             spdlog::debug("process server message success");
         }
-        client_message.ack = receive_base_ - 1;
-        client_message.seq = std::min(send_data_->size() - 1, static_cast<unsigned long long>(receive_base_ - 1));
-        client_message.data = send_data_->at(client_message.seq);
+        // ack message in SR receive windows
+        if (over_ack > receive_base_) {
+            client_message.ack = over_ack;
+            client_message.seq = std::min(send_data_->size() - 1, static_cast<unsigned long long>(over_ack));
+            client_message.seq = 0;
+            client_message.data = send_data_->at(client_message.seq);
+            auto client_message_string = MessageToString(client_message);
 
-        auto client_message_string = MessageToString(client_message);
+            std::thread send_thread([client_message_string, this]() {
+                char temp_buffer[BUFFER_LENGTH];
+                ZeroMemory(temp_buffer, BUFFER_LENGTH);
+                strcpy(temp_buffer, client_message_string.c_str());
+                SendClientMessage(temp_buffer);
+            });
+            send_thread.detach();
+        }
+        // ack message for normal SR receive windows
+        for (int i = last_receive_base; i < receive_base_; i++) {
+            auto it = receive_buffer_data_.find(i);
+            if (it != receive_buffer_data_.end()) {
+                receive_buffer_data_.erase(it);
+                continue;
+            }
+            client_message.ack = i;
+            client_message.seq = std::min(send_data_->size() - 1, static_cast<unsigned long long>(receive_base_ - 1));
+            client_message.data = send_data_->at(client_message.seq);
 
-        if (count_ == 1) {
-            // for package loss use
-            count_ = count_ + 1;
-        } else {
+            auto client_message_string = MessageToString(client_message);
+
             std::thread send_thread([client_message_string, this]() {
                 char temp_buffer[BUFFER_LENGTH];
                 ZeroMemory(temp_buffer, BUFFER_LENGTH);
@@ -157,7 +180,7 @@ int GBNClient::Start() {
 }
 
 
-int GBNClient::ProcessServerMessage(const std::string &buffer) {
+int GBNClient::ProcessServerMessage(const std::string &buffer, int &ack) {
     TransferMessage server_message;
     if (StringToMessage(buffer, server_message) == -1) {
         spdlog::error("parse server message string failed, message: {}", buffer);
@@ -170,17 +193,33 @@ int GBNClient::ProcessServerMessage(const std::string &buffer) {
     if (server_message.seq == receive_base_) {
         // set loss package
         if (server_message.seq == 2 && count_ == 0) {
-//        if (false) {
             count_++;
         } else {
             receive_base_++;
             if (receive_file_.is_open()) {
                 receive_file_ << server_message.data;
             }
+            while (true) {
+                auto it = receive_buffer_data_.find(receive_base_);
+                if (it == receive_buffer_data_.end()) break;
+
+                receive_base_++;
+                if (receive_file_.is_open()) {
+                    receive_file_ << it->second;
+                }
+            }
         }
+        ack = receive_base_;
+    } else if (server_message.seq < receive_base_ + RECV_WIND_SIZE) {
+        receive_buffer_data_[server_message.seq] = server_message.data;
+        if (receive_buffer_data_.size() >= RECV_WIND_SIZE) {
+            spdlog::error("SR error: receive buffer data size > receive window size");
+            return -1;
+        }
+        ack = server_message.seq;
+    } else {
+        ack = receive_base_;
     }
-
-
     return 0;
 }
 

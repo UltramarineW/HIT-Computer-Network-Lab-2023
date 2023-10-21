@@ -9,34 +9,34 @@
 GBNServer::GBNServer(const unsigned int &port, std::string ip) : port_(port),
                                                                  ip_(std::move(ip)),
                                                                  send_base_(0),
-                                                                 receive_base_(0),
                                                                  next_seq_num_(0),
                                                                  receive_file_(
                                                                          R"(E:\HIT_Project\HIT-Computer-Network-Lab-2023\lab2\server_receive_text.txt)") {
     spdlog::debug("udp server start");
     send_data_ = std::make_unique<std::vector<std::string>>();
-//    for (int i = 0; i < 20; i++) {
+    for (int i = 0; i < 20; i++) {
 //        std::string data_package = "server_data_package_" + std::to_string(i);
-//        send_data_->push_back(std::move(data_package));
-//    }
+        std::string data_package = std::to_string(i);
+        send_data_->push_back(std::move(data_package));
+    }
 
     // file transfer
-    std::ifstream file(R"(E:\HIT_Project\HIT-Computer-Network-Lab-2023\lab2\server_send_text.txt)");
-    if (!file.is_open()) {
-        spdlog::error("can't open file: {}", "server_send_text.txt");
-        return;
-    }
+//    std::ifstream file(R"(E:\HIT_Project\HIT-Computer-Network-Lab-2023\lab2\server_send_text.txt)");
+//    if (!file.is_open()) {
+//        spdlog::error("can't open file: {}", "server_send_text.txt");
+//        return;
+//    }
+//    char buffer[SEND_MESSAGE_SIZE + 1];
+//    while (file.read(buffer, SEND_MESSAGE_SIZE)) {
+//        buffer[SEND_MESSAGE_SIZE] = '\0';
+//        send_data_->push_back(std::string(buffer));
+//    }
+//    if (file.gcount() > 0) {
+//        send_data_->push_back(std::string(buffer).substr(0, file.gcount()));
+//    }
+//    file.close();
 
-    char buffer[SEND_MESSAGE_SIZE + 1];
-    while (file.read(buffer, SEND_MESSAGE_SIZE)) {
-        buffer[SEND_MESSAGE_SIZE] = '\0';
-        send_data_->push_back(std::string(buffer));
-    }
-    if (file.gcount() > 0) {
-        send_data_->push_back(std::string(buffer).substr(0, file.gcount()));
-    }
-    file.close();
-
+    // receive data vector
     receive_data_ = std::make_unique<std::vector<std::string>>(send_data_->size(), "");
     spdlog::info("server send text read success, vector size: {}", send_data_->size());
 }
@@ -63,6 +63,10 @@ int GBNServer::Start() {
         if (send_base_ == send_data_->size()) break;
         // server send message
         while (next_seq_num_ - send_base_ + 1 <= SEND_WIND_SIZE && next_seq_num_ < send_data_->size()) {
+            if (ack_windows_.find(next_seq_num_) != ack_windows_.end()) {
+                next_seq_num_++;
+                continue;
+            }
             server_message.seq = next_seq_num_;
             server_message.data = send_data_->at(next_seq_num_);
             auto server_message_string = MessageToString(server_message);
@@ -122,9 +126,17 @@ int GBNServer::ProcessClientMessage(const std::string &message, int &ack) {
                      client_message.data);
     }
     receive_data_->at(client_message.seq) = client_message.data;
+    ack_windows_.insert(client_message.ack);
     ack = client_message.seq;
 
-    send_base_ = client_message.ack + 1;
+    if (send_base_ == client_message.ack) {
+        int temp = client_message.ack + 1;
+        while (ack_windows_.find(temp) != ack_windows_.end()) {
+            ack_windows_.erase(temp);
+            temp += 1;
+        }
+        send_base_ = temp;
+    }
     return 0;
 }
 
