@@ -12,6 +12,7 @@
 #include <iostream>
 #include <cstdio>
 #include <cstring>
+#include <algorithm>
 #include <fmt/format.h>
 #include <fstream>
 #include "transfer_message.h"
@@ -40,7 +41,9 @@ private:
     SOCKET client_socket_;
     sockaddr_in addr_server_;
     std::unique_ptr<std::vector<std::string>> send_data_;
-    int base_;
+    int receive_base_;
+    int send_base_;
+    int next_seq_num_;
     int count_;
     std::ofstream receive_file_;
 };

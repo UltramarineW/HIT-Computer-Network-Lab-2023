@@ -12,7 +12,6 @@
 #include "utils.h"
 
 #define SEND_WIND_SIZE 4
-#define SEND_MESSAGE_SIZE 100
 
 class GBNServer {
 public:
@@ -21,7 +20,7 @@ public:
     int Start();
 
 private:
-    int ProcessClientMessage(const std::string &message);
+    int ProcessClientMessage(const std::string &message, int &ack);
 
     int InitServerSocket();
 
@@ -39,8 +38,11 @@ private:
 
     std::unique_ptr<std::vector<std::string>> send_data_;
     std::mutex mtx_;
-    int base_;
+    int send_base_;
+    int receive_base_;
     int next_seq_num_;
+    std::ofstream receive_file_;
+    std::unique_ptr<std::vector<std::string>> receive_data_;
 };
 
 

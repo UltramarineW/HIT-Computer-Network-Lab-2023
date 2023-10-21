@@ -6,8 +6,13 @@
 #include "GBN_server.h"
 #include "transfer_message.h"
 
-GBNServer::GBNServer(const unsigned int &port, std::string ip) : port_(port), ip_(std::move(ip)), base_(0),
-                                                                 next_seq_num_(0) {
+GBNServer::GBNServer(const unsigned int &port, std::string ip) : port_(port),
+                                                                 ip_(std::move(ip)),
+                                                                 send_base_(0),
+                                                                 receive_base_(0),
+                                                                 next_seq_num_(0),
+                                                                 receive_file_(
+                                                                         R"(E:\HIT_Project\HIT-Computer-Network-Lab-2023\lab2\server_receive_text.txt)") {
     spdlog::debug("udp server start");
     send_data_ = std::make_unique<std::vector<std::string>>();
 //    for (int i = 0; i < 20; i++) {
@@ -31,7 +36,9 @@ GBNServer::GBNServer(const unsigned int &port, std::string ip) : port_(port), ip
         send_data_->push_back(std::string(buffer).substr(0, file.gcount()));
     }
     file.close();
-    spdlog::info("send text read success, vector size: {}", send_data_->size());
+
+    receive_data_ = std::make_unique<std::vector<std::string>>(send_data_->size(), "");
+    spdlog::info("server send text read success, vector size: {}", send_data_->size());
 }
 
 int GBNServer::Start() {
@@ -53,11 +60,10 @@ int GBNServer::Start() {
 
     // start communication
     while (true) {
-        if (base_ == send_data_->size()) break;
+        if (send_base_ == send_data_->size()) break;
         // server send message
-        while (next_seq_num_ - base_ + 1 <= SEND_WIND_SIZE && next_seq_num_ < send_data_->size()) {
+        while (next_seq_num_ - send_base_ + 1 <= SEND_WIND_SIZE && next_seq_num_ < send_data_->size()) {
             server_message.seq = next_seq_num_;
-            server_message.ack = 0;
             server_message.data = send_data_->at(next_seq_num_);
             auto server_message_string = MessageToString(server_message);
 
@@ -79,28 +85,33 @@ int GBNServer::Start() {
         message_len = recvfrom(server_socket_, message, BUFFER_LENGTH, 0, (sockaddr *) &addr_client_, &slen);
         if (message_len == SOCKET_ERROR) {
             spdlog::warn("server recv message from client timeout, error code: {}", WSAGetLastError());
-            next_seq_num_ = base_;
+            next_seq_num_ = send_base_;
             continue;
         } else {
             spdlog::debug("server receive message from {}:{}",
                           inet_ntoa(addr_client_.sin_addr),
                           ntohs(addr_client_.sin_port));
         }
-
-        if (ProcessClientMessage(std::string(message)) < 0) {
+        // process client message
+        if (ProcessClientMessage(std::string(message), server_message.ack) < 0) {
             spdlog::error("processing client message failed");
             return -1;
         } else {
             spdlog::debug("process client message success");
         }
     }
+
     closesocket(server_socket_);
+    for (const auto &it: *receive_data_) {
+        receive_file_ << it;
+    }
+    receive_file_.close();
     spdlog::info("close server socket");
     WSACleanup();
     return 0;
 }
 
-int GBNServer::ProcessClientMessage(const std::string &message) {
+int GBNServer::ProcessClientMessage(const std::string &message, int &ack) {
     // Parse transfer message
     TransferMessage client_message;
     if (StringToMessage(message, client_message) == -1) {
@@ -110,8 +121,10 @@ int GBNServer::ProcessClientMessage(const std::string &message) {
         spdlog::info("client->server: seq: {} ack: {} data: {}", client_message.seq, client_message.ack,
                      client_message.data);
     }
+    receive_data_->at(client_message.seq) = client_message.data;
+    ack = client_message.seq;
 
-    base_ = client_message.ack + 1;
+    send_base_ = client_message.ack + 1;
     return 0;
 }
 

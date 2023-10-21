@@ -6,6 +6,7 @@
 #define COMPUTER_NETWORK_LAB_TRANSFER_MESSAGE_H
 
 #define BUFFER_LENGTH 1026
+#define SEND_MESSAGE_SIZE 100
 // the seq number is an integer between [0, 19]
 
 struct TransferMessage {
