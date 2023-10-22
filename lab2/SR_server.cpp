@@ -86,6 +86,7 @@ int SRServer::Start() {
             Sleep(100);
             send_thread.detach();
             next_seq_num_++;
+            spdlog::info("server SR send windows change to {}", next_seq_num_ - send_base_);
         }
 
         // receive message from client
@@ -143,6 +144,7 @@ int SRServer::ProcessClientMessage(const std::string &message, int &ack) {
             temp += 1;
         }
         send_base_ = temp;
+        spdlog::info("server SR send windows change to {}", next_seq_num_ - send_base_);
     }
     return 0;
 }

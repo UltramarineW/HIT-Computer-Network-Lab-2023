@@ -6,6 +6,7 @@
 
 #include <utility>
 
+
 SRClient::SRClient(const unsigned int &port, std::string ip) : port_(port),
                                                                ip_(std::move(ip)),
                                                                receive_base_(0),
@@ -130,15 +131,18 @@ int SRClient::Start() {
         int last_receive_base = receive_base_;
         int over_ack = 0;
 
-        if (ProcessServerMessage(std::string(buffer), over_ack) < 0) {
+        int err = ProcessServerMessage(std::string(buffer), over_ack);
+        if (err < 0) {
             spdlog::error("client process server message fail");
             return -1;
+        } else if (err == 1) {
+            continue;
         } else {
             spdlog::debug("process server message success");
         }
         // set ack random loss
-        int ack_loss_rate = 50;
-        if (GetRandomInteger(1, 100) <= ack_loss_rate) {
+        if (GetRandomInteger(1, 100) <= ACK_LOSS_RATE) {
+            spdlog::critical("ack loss");
             continue;
         }
 
@@ -198,8 +202,10 @@ int SRClient::ProcessServerMessage(const std::string &buffer, int &ack) {
     }
 
     // random package loss return
-    int package_loss_rate = 0;
-    if (GetRandomInteger(1, 100) <= package_loss_rate) return 0;
+    if (GetRandomInteger(1, 100) <= PACKAGE_LOSS_RATE) {
+        spdlog::critical("package {} loss", server_message.seq);
+        return 1;
+    }
 
     if (server_message.seq == receive_base_) {
         receive_base_++;

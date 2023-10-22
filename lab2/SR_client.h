@@ -17,8 +17,11 @@
 #include <fstream>
 #include "transfer_message.h"
 #include "utils.h"
+#include <gflags/gflags.h>
 
 #define RECV_WIND_SIZE 4
+#define PACKAGE_LOSS_RATE 20
+#define ACK_LOSS_RATE 20
 
 using std::string;
 
