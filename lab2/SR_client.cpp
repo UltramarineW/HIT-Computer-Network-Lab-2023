@@ -2,16 +2,16 @@
 // Created by wujiayang on 2023/10/17.
 //
 
-#include "GBN_client.h"
+#include "SR_client.h"
 
 #include <utility>
 
-GBNClient::GBNClient(const unsigned int &port, std::string ip) : port_(port),
-                                                                 ip_(std::move(ip)),
-                                                                 receive_base_(0),
-                                                                 count_(0),
-                                                                 receive_file_(
-                                                                         R"(E:\HIT_Project\HIT-Computer-Network-Lab-2023\lab2\client_receive_text.txt)") {
+SRClient::SRClient(const unsigned int &port, std::string ip) : port_(port),
+                                                               ip_(std::move(ip)),
+                                                               receive_base_(0),
+                                                               count_{},
+                                                               receive_file_(
+                                                                       R"(E:\HIT_Project\HIT-Computer-Network-Lab-2023\lab2\client_receive_text.txt)") {
     spdlog::debug("udp client start");
 
     send_data_ = std::make_unique<std::vector<std::string>>();
@@ -45,10 +45,12 @@ GBNClient::GBNClient(const unsigned int &port, std::string ip) : port_(port),
     file.close();
 
     spdlog::info("client send text read success, vector size: {}", send_data_->size());
+
+
 }
 
 
-int GBNClient::InitClientServerSocket() {
+int SRClient::InitClientServerSocket() {
     // create client socket
     client_socket_ = socket(AF_INET, SOCK_DGRAM, 0);
     if (client_socket_ == INVALID_SOCKET) {
@@ -71,7 +73,7 @@ int GBNClient::InitClientServerSocket() {
     return 0;
 }
 
-int GBNClient::HandshakeProcess() {
+int SRClient::HandshakeProcess() {
     TransferMessage client_handshake_message{0, 0, "hello from client"};
 
     // send message
@@ -87,7 +89,7 @@ int GBNClient::HandshakeProcess() {
     return 0;
 }
 
-int GBNClient::Start() {
+int SRClient::Start() {
 
     if (InitClientServerSocket() < 0) {
         return -1;
@@ -134,8 +136,14 @@ int GBNClient::Start() {
         } else {
             spdlog::debug("process server message success");
         }
+        // set ack random loss
+        int ack_loss_rate = 50;
+        if (GetRandomInteger(1, 100) <= ack_loss_rate) {
+            continue;
+        }
+
         // ack message in SR receive windows
-        if (over_ack > receive_base_) {
+        if (over_ack > receive_base_ || over_ack < receive_base_) {
             client_message.ack = over_ack;
             client_message.seq = std::min(send_data_->size() - 1, static_cast<unsigned long long>(over_ack));
             client_message.data = send_data_->at(client_message.seq);
@@ -179,7 +187,7 @@ int GBNClient::Start() {
 }
 
 
-int GBNClient::ProcessServerMessage(const std::string &buffer, int &ack) {
+int SRClient::ProcessServerMessage(const std::string &buffer, int &ack) {
     TransferMessage server_message;
     if (StringToMessage(buffer, server_message) == -1) {
         spdlog::error("parse server message string failed, message: {}", buffer);
@@ -189,40 +197,42 @@ int GBNClient::ProcessServerMessage(const std::string &buffer, int &ack) {
                      server_message.data);
     }
 
+    // random package loss return
+    int package_loss_rate = 0;
+    if (GetRandomInteger(1, 100) <= package_loss_rate) return 0;
+
     if (server_message.seq == receive_base_) {
-        // set loss package
-        if (server_message.seq == 2 && count_ == 0) {
-            count_++;
-        } else {
+        receive_base_++;
+        if (receive_file_.is_open()) {
+            receive_file_ << server_message.data;
+        }
+        while (true) {
+            auto it = receive_buffer_data_.find(receive_base_);
+            if (it == receive_buffer_data_.end()) break;
+
             receive_base_++;
             if (receive_file_.is_open()) {
-                receive_file_ << server_message.data;
-            }
-            while (true) {
-                auto it = receive_buffer_data_.find(receive_base_);
-                if (it == receive_buffer_data_.end()) break;
-
-                receive_base_++;
-                if (receive_file_.is_open()) {
-                    receive_file_ << it->second;
-                }
+                receive_file_ << it->second;
             }
         }
         ack = receive_base_;
-    } else if (server_message.seq < receive_base_ + RECV_WIND_SIZE) {
+    } else if (server_message.seq < receive_base_ + RECV_WIND_SIZE && server_message.seq > receive_base_) {
         receive_buffer_data_[server_message.seq] = server_message.data;
         if (receive_buffer_data_.size() >= RECV_WIND_SIZE) {
             spdlog::error("SR error: receive buffer data size > receive window size");
             return -1;
         }
         ack = server_message.seq;
-    } else {
+    } else if (server_message.seq >= receive_base_ + RECV_WIND_SIZE) {
         ack = receive_base_;
+    } else {
+        // ack loss situation
+        ack = server_message.seq;
     }
     return 0;
 }
 
-int GBNClient::SendClientMessage(char *buffer) {
+int SRClient::SendClientMessage(char *buffer) {
     Sleep(1000);
     // send message
     if (sendto(client_socket_, buffer, strlen(buffer), 0, (sockaddr *) &addr_server_, sizeof(sockaddr_in)) ==

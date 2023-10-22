@@ -1,5 +1,5 @@
 //
-// Created by wujiayang on 2023/10/17.
+// Created by wujiayang on 2023/10/22.
 //
 #include <iostream>
 #include <gflags/gflags.h>
@@ -9,7 +9,6 @@
 #include <thread>
 
 #include "SR_client.h"
-#include "SR_server.h"
 #include "utils.h"
 
 DEFINE_uint32(port, 12400, "port for server to listen on and for client to bind");
@@ -52,18 +51,8 @@ int main(int argc, char *argv[]) {
     }
 
     // Create Server and Client
-    SRServer server(FLAGS_port, FLAGS_ip);
     SRClient client(FLAGS_port, FLAGS_ip);
 
-    std::thread server_thread([&server]() {
-        int err = server.Start();
-        if (err < 0) {
-            spdlog::error("server return error");
-            exit(err);
-        }
-    });
-
-    Sleep(200);
 
     std::thread client_thread([&client]() {
         int err = client.Start();
@@ -72,8 +61,6 @@ int main(int argc, char *argv[]) {
             exit(err);
         }
     });
-
-    server_thread.join();
     client_thread.join();
 
     return 0;

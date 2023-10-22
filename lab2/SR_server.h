@@ -2,22 +2,23 @@
 // Created by wujiayang on 2023/10/17.
 //
 
-#ifndef COMPUTER_NETWORK_LAB_GBN_SERVER_H
-#define COMPUTER_NETWORK_LAB_GBN_SERVER_H
+#ifndef COMPUTER_NETWORK_LAB_SR_SERVER_H
+#define COMPUTER_NETWORK_LAB_SR_SERVER_H
 
 #include <string>
 #include <spdlog/spdlog.h>
 #include <set>
 #include <algorithm>
 #include <winsock2.h>
+#include <fstream>
 #include <queue>
 #include "utils.h"
 
 #define SEND_WIND_SIZE 4
 
-class GBNServer {
+class SRServer {
 public:
-    GBNServer(const unsigned int &port, std::string ip);
+    SRServer(const unsigned int &port, std::string ip);
 
     int Start();
 
@@ -45,7 +46,8 @@ private:
     std::ofstream receive_file_;
     std::unique_ptr<std::vector<std::string>> receive_data_;
     std::set<int> ack_windows_;
+    int count_;
 };
 
 
-#endif //COMPUTER_NETWORK_LAB_GBN_SERVER_H
+#endif //COMPUTER_NETWORK_LAB_SR_SERVER_H

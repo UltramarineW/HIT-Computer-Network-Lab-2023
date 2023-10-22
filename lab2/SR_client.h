@@ -2,8 +2,8 @@
 // Created by wujiayang on 2023/10/17.
 //
 
-#ifndef COMPUTER_NETWORK_LAB_GBN_CLIENT_H
-#define COMPUTER_NETWORK_LAB_GBN_CLIENT_H
+#ifndef COMPUTER_NETWORK_LAB_SR_CLIENT_H
+#define COMPUTER_NETWORK_LAB_SR_CLIENT_H
 
 #include <string>
 #include <random>
@@ -22,9 +22,9 @@
 
 using std::string;
 
-class GBNClient {
+class SRClient {
 public:
-    GBNClient(const unsigned int &port, std::string ip);
+    SRClient(const unsigned int &port, std::string ip);
 
     int Start();
 
@@ -47,8 +47,8 @@ private:
     std::ofstream receive_file_;
     int receive_base_;
     // use for package loss
-    int count_;
+    int count_[1024];
 };
 
 
-#endif //COMPUTER_NETWORK_LAB_GBN_CLIENT_H
+#endif //COMPUTER_NETWORK_LAB_SR_CLIENT_H

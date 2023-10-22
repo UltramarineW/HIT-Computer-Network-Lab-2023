@@ -3,15 +3,15 @@
 //
 
 #include <fstream>
-#include "GBN_server.h"
+#include "SR_server.h"
 #include "transfer_message.h"
 
-GBNServer::GBNServer(const unsigned int &port, std::string ip) : port_(port),
-                                                                 ip_(std::move(ip)),
-                                                                 send_base_(0),
-                                                                 next_seq_num_(0),
-                                                                 receive_file_(
-                                                                         R"(E:\HIT_Project\HIT-Computer-Network-Lab-2023\lab2\server_receive_text.txt)") {
+SRServer::SRServer(const unsigned int &port, std::string ip) : port_(port),
+                                                               ip_(std::move(ip)),
+                                                               send_base_(0),
+                                                               next_seq_num_(0),
+                                                               receive_file_(
+                                                                       R"(E:\HIT_Project\HIT-Computer-Network-Lab-2023\lab2\server_receive_text.txt)") {
     spdlog::debug("udp server start");
     send_data_ = std::make_unique<std::vector<std::string>>();
     // for test
@@ -45,9 +45,10 @@ GBNServer::GBNServer(const unsigned int &port, std::string ip) : port_(port),
     // receive data vector
     receive_data_ = std::make_unique<std::vector<std::string>>(send_data_->size(), "");
     spdlog::info("server send text read success, vector size: {}", send_data_->size());
+    count_ = 0;
 }
 
-int GBNServer::Start() {
+int SRServer::Start() {
     // init server socket
     if (InitServerSocket() < 0) {
         return -1;
@@ -121,7 +122,7 @@ int GBNServer::Start() {
     return 0;
 }
 
-int GBNServer::ProcessClientMessage(const std::string &message, int &ack) {
+int SRServer::ProcessClientMessage(const std::string &message, int &ack) {
     // Parse transfer message
     TransferMessage client_message;
     if (StringToMessage(message, client_message) == -1) {
@@ -147,7 +148,7 @@ int GBNServer::ProcessClientMessage(const std::string &message, int &ack) {
 }
 
 
-int GBNServer::InitServerSocket() {
+int SRServer::InitServerSocket() {
     server_socket_ = socket(AF_INET, SOCK_DGRAM, 0);
     if (server_socket_ == INVALID_SOCKET) {
         spdlog::error("create server socket error");
@@ -169,7 +170,7 @@ int GBNServer::InitServerSocket() {
     return 0;
 }
 
-int GBNServer::HandshakeProcess() {
+int SRServer::HandshakeProcess() {
     // receive message from client
     char message[BUFFER_LENGTH];
     ZeroMemory(message, BUFFER_LENGTH);
@@ -192,7 +193,7 @@ int GBNServer::HandshakeProcess() {
     return 0;
 }
 
-int GBNServer::SetSocketTimeout() {
+int SRServer::SetSocketTimeout() {
     // set server recv timeout
     int server_recv_timeout = 3 * 1000; // 2s
     if (setsockopt(server_socket_, SOL_SOCKET, SO_RCVTIMEO, (char *) &server_recv_timeout,
@@ -205,7 +206,7 @@ int GBNServer::SetSocketTimeout() {
     return 0;
 }
 
-int GBNServer::SendServerMessage(char *temp_message) {
+int SRServer::SendServerMessage(char *temp_message) {
     Sleep(1000);
     if (sendto(server_socket_, temp_message, strlen(temp_message), 0, (sockaddr *) &addr_client_,
                sizeof(sockaddr_in)) == SOCKET_ERROR) {

@@ -25,10 +25,10 @@ int StringToMessage(const std::string &transfer_string, TransferMessage &message
     }
 }
 
-int GetRandomInteger(int min_value, int max_value) {
-    std::random_device rd;
-    std::mt19937 mt(rd());
+std::random_device rd;
+std::mt19937 mt(rd());
 
+int GetRandomInteger(int min_value, int max_value) {
     std::uniform_int_distribution<int> dist(min_value, max_value);
     return dist(mt);
 }
